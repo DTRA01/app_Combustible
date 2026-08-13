@@ -1,0 +1,220 @@
+/* ============================================
+   RESPONSIVE - Dashboard PNA
+   Agregar después de styles.css en index.html
+   ============================================ */
+
+/* ===== TABLET (hasta 1024px) ===== */
+@media (max-width: 1024px) {
+  .chart-row {
+    flex-direction: column !important;
+  }
+  .chart-row .glass-section {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .kpi-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .kpi-card {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 200px;
+  }
+}
+
+/* ===== CELULAR (hasta 768px) ===== */
+@media (max-width: 768px) {
+  /* Header */
+  .app-header {
+    padding: 12px 16px;
+  }
+  .header-brand h1 {
+    font-size: 16px !important;
+  }
+  .header-brand h1 span {
+    font-size: 11px !important;
+  }
+  .brand-logo {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Navegación tipo hamburguesa simplificada */
+  .nav-tabs-custom {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    gap: 4px;
+  }
+  .nav-tab-item {
+    padding: 8px 12px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .nav-tab-item span {
+    font-size: 16px;
+  }
+  .tab-badge {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+
+  /* KPIs en columna */
+  .kpi-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .kpi-card {
+    width: 100%;
+    flex: none;
+    padding: 14px;
+  }
+  .kpi-value {
+    font-size: 22px !important;
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    padding: 24px 16px;
+  }
+  .drop-zone h3 {
+    font-size: 16px;
+  }
+  .dz-tags {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .dz-tags span {
+    font-size: 11px;
+  }
+
+  /* Tablas con scroll horizontal */
+  .data-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+  }
+  .data-table {
+    min-width: 600px;
+    font-size: 12px;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+
+  /* Consumo diario - tabla ancha */
+  #consumo-diario {
+    min-width: 800px;
+  }
+
+  /* Login */
+  .login-card {
+    width: 90%;
+    max-width: 340px;
+    padding: 24px 20px;
+  }
+  .login-brand h2 {
+    font-size: 18px;
+  }
+
+  /* Filtros */
+  .filters-bar {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .filters-bar input,
+  .filters-bar select {
+    width: 100%;
+  }
+
+  /* Repo items */
+  .repo-item {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .repo-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* Form ABM */
+  #panel-abm-usuarios form {
+    flex-direction: column !important;
+  }
+  #panel-abm-usuarios form input,
+  #panel-abm-usuarios form select {
+    width: 100% !important;
+  }
+
+  /* Charts */
+  .chart-container {
+    height: 240px !important;
+  }
+
+  /* Pagination */
+  .pagination-custom {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  .pagination-btns {
+    justify-content: center;
+  }
+}
+
+/* ===== CELULAR CHICO (hasta 480px) ===== */
+@media (max-width: 480px) {
+  .main-content {
+    padding: 12px;
+  }
+  .glass-section {
+    padding: 14px;
+  }
+  .section-header h2 {
+    font-size: 14px;
+  }
+  .nav-tab-item {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+  .kpi-icon {
+    font-size: 20px;
+  }
+  .kpi-label {
+    font-size: 11px;
+  }
+  .kpi-value {
+    font-size: 18px !important;
+  }
+  .data-table {
+    font-size: 11px;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 6px 8px;
+  }
+  .btn-glass {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+/* ===== SCROLLBAR ESTILIZADA ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.03);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0,212,255,0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,212,255,0.5);
+}
