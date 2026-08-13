@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Combustibles — Prefectura Naval Argentina</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="responsive.css?v=2">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" class="login-overlay active">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="brand-logo-login"><img src="prefectura.png" alt="PNA"></div>
+      <h2>Prefectura Naval Argentina</h2>
+      <p>División Combustible — Sistema de Control</p>
+    </div>
+    <form class="login-form" onsubmit="event.preventDefault(); doLogin();" autocomplete="off">
+      <div class="login-field">
+        <label>Usuario</label>
+        <input type="text" id="login-user" placeholder="Ej: admin, operario" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-login">Ingresar</button>
+      <div id="login-error" class="login-error"></div>
+    </form>
+  </div>
+</div>
+
+
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <img src="prefectura.png" alt="Prefectura Naval Argentina">
+        </div>
+        <h1>
+          Prefectura Naval Argentina
+          <span>Autoridad Marítima — División Combustible</span>
+        </h1>
+      </div>
+      <div class="header-actions" id="header-actions">
+        <!-- Se llena dinámicamente según login -->
+      </div>
+    </div>
+    <div class="nav-tabs-wrapper">
+      <div class="nav-tabs-custom">
+        <div class="nav-tab-item active" onclick="switchTab('resumen')" data-tab="resumen">
+          <span>📊</span> Resumen General
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('saldos')" data-tab="saldos">
+          <span>💰</span> Saldos Servicios <span class="tab-badge" id="badge-saldos">0</span>
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('ypf')" data-tab="ypf">
+          <span>⛽</span> YPF en Ruta <span class="tab-badge" id="badge-ypf">0</span>
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('gc')" data-tab="gc">
+          <span>🚢</span> Guardacostas <span class="tab-badge" id="badge-gc">0</span>
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('consumo')" data-tab="consumo">
+          <span>📈</span> Consumo Diario <span class="tab-badge" id="badge-consumo">0</span>
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('simo')" data-tab="simo">
+          <span>📋</span> Reporte SIMO <span class="tab-badge" id="badge-simo">0</span>
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('lub')" data-tab="lub">
+          <span>🛢️</span> Lubricantes <span class="tab-badge" id="badge-lub">0</span>
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('repositorio')" data-tab="repositorio">
+          <span>📚</span> Repositorio
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('comparativa')" data-tab="comparativa">
+          <span>⚖️</span> Comparativa
+        </div>
+        <div class="nav-tab-item" onclick="switchTab('previsiones')" data-tab="previsiones">
+          <span>🔮</span> Previsiones
+        </div>
+        <div class="nav-tab-item admin-only" onclick="switchTab('admin')" data-tab="admin" style="display:none;">
+          <span>⚙️</span> Administración
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="handleFiles(event)">
+
+    <!-- ALERTS -->
+    <div id="alert-error" class="alert-custom alert-error">
+      <span>⚠️</span> <span id="alert-error-msg"></span>
+    </div>
+    <div id="alert-success" class="alert-custom alert-success">
+      <span>✅</span> <span id="alert-success-msg"></span>
+    </div>
+
+
+
+    <!-- ======== TAB: RESUMEN GENERAL ======== -->
+    <div id="tab-resumen" class="tab-content active">
+
+      <!-- KPIs: 3 arriba -->
+      
+    <!-- DROP ZONE & FILES PANEL -->
+    <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+      <div class="dz-icon">📁</div>
+      <h3>Arrastrá los 3 archivos Excel aquí</h3>
+      <p>O hacé clic para seleccionarlos manualmente</p>
+      <div class="dz-tags">
+        <span>📊 Planilla Diaria</span>
+        <span>🚢 Saldos GC</span>
+        <span>📈 Consumo por Día</span>
+      </div>
+    </div>
+
+    <div id="files-panel" class="files-panel">
+      <div class="files-panel-header">
+        <h3>📂 Archivos cargados</h3>
+        <button class="btn-glass btn-glass-danger btn-sm" onclick="clearAllData()">🗑️ Limpiar todo</button>
+      </div>
+      <div id="file-tags" class="file-tags"></div>
+    </div>
+
+<div class="kpi-row">
+        <div class="kpi-card kpi-accent">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-label">Saldo Total Servicios</div>
+          <div class="kpi-value" id="kpi-saldo-total">$0,00</div>
+          <div class="kpi-sub">SEAV + SBGC + VISA FLOTA</div>
+        </div>
+        <div class="kpi-card kpi-success">
+          <div class="kpi-icon">⛽</div>
+          <div class="kpi-label">Crédito YPF Terrestre</div>
+          <div class="kpi-value" id="kpi-credito-terrestre">$0,00</div>
+          <div class="kpi-sub">Asignado inicio de mes</div>
+        </div>
+        <div class="kpi-card kpi-warning">
+          <div class="kpi-icon">🌊</div>
+          <div class="kpi-label">Crédito YPF Superficie</div>
+          <div class="kpi-value" id="kpi-credito-superficie">$0,00</div>
+          <div class="kpi-sub">Asignado inicio de mes</div>
+        </div>
+      </div>
+
+      <!-- KPIs: 3 abajo -->
+      <div class="kpi-row">
+        <div class="kpi-card kpi-danger">
+          <div class="kpi-icon">📉</div>
+          <div class="kpi-label">Consumo Acumulado</div>
+          <div class="kpi-value" id="kpi-consumo-acum">$0,00</div>
+          <div class="kpi-sub">Total consumido a la fecha</div>
+        </div>
+        <div class="kpi-card kpi-info">
+          <div class="kpi-icon">🚢</div>
+          <div class="kpi-label">Guardacostas Activos</div>
+          <div class="kpi-value" id="kpi-gc-activos">0</div>
+          <div class="kpi-sub">En condición BRAVO</div>
+        </div>
+        <div class="kpi-card kpi-success">
+          <div class="kpi-icon">⛽</div>
+          <div class="kpi-label">Saldo Promedio GC</div>
+          <div class="kpi-value" id="kpi-saldo-gc-avg">0 L</div>
+          <div class="kpi-sub">Litros promedio por unidad</div>
+        </div>
+      </div>
+
+      <!-- Charts Row 1 -->
+      <div class="chart-row">
+        <div class="glass-section active">
+          <div class="section-header">
+            <h2><span>📊</span> Distribución de Saldos por Servicio</h2>
+          </div>
+          <div class="section-body">
+            <div class="chart-container">
+              <canvas id="chart-saldos-pie"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="glass-section active">
+          <div class="section-header">
+            <h2><span>📈</span> Consumo Diario por Dirección</h2>
+          </div>
+          <div class="section-body">
+            <div class="chart-container">
+              <canvas id="chart-consumo-line"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="chart-row">
+        <div class="glass-section active">
+          <div class="section-header">
+            <h2><span>⛽</span> Crédito vs Consumo YPF Terrestre</h2>
+          </div>
+          <div class="section-body">
+            <div class="chart-container">
+              <canvas id="chart-ypf-bar"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="glass-section active">
+          <div class="section-header">
+            <h2><span>🚢</span> Nivel de Combustible GC (%)</h2>
+          </div>
+          <div class="section-body">
+            <div class="chart-container">
+              <canvas id="chart-gc-levels"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: SALDOS SERVICIOS ======== -->
+    <div id="tab-saldos" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>💰</span> Saldos de Combustibles — Servicios</h2>
+          <div class="actions">
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="exportTable('saldos-servicios')">
+              <span>📥</span> Exportar
+            </button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="filters-bar">
+            <input type="text" id="search-saldos" placeholder="🔍 Buscar servicio, OP, monto..." onkeyup="filterTable('saldos-servicios')">
+            <select id="filter-ff" onchange="filterTable('saldos-servicios')">
+              <option value="">Todas las F.F.</option>
+              <option value="11">F.F. 11 - Tesorería</option>
+              <option value="13">F.F. 13 - Fondos Rotatorios</option>
+            </select>
+          </div>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="saldos-servicios">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pagination-custom" id="pagination-saldos"></div>
+        </div>
+      </div>
+
+      <div class="glass-section active" style="margin-top:24px;">
+        <div class="section-header">
+          <h2><span>📋</span> Saldos DTRA — Previsión Tentativa Julio 2026</h2>
+        </div>
+        <div class="section-body">
+          <div class="data-table-wrapper">
+            <table class="data-table" id="saldos-dtra">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: YPF EN RUTA ======== -->
+    <div id="tab-ypf" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>⛽</span> YPF en Ruta — Terrestre</h2>
+          <div class="actions">
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="exportTable('ypf-terrestre')">
+              <span>📥</span> Exportar
+            </button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="filters-bar">
+            <input type="text" id="search-ypf-t" placeholder="🔍 Buscar contrato, dirección..." onkeyup="filterTable('ypf-terrestre')">
+          </div>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="ypf-terrestre">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pagination-custom" id="pagination-ypf-t"></div>
+        </div>
+      </div>
+
+      <div class="glass-section active" style="margin-top:24px;">
+        <div class="section-header">
+          <h2><span>🌊</span> YPF en Ruta — Superficie</h2>
+          <div class="actions">
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="exportTable('ypf-superficie')">
+              <span>📥</span> Exportar
+            </button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="filters-bar">
+            <input type="text" id="search-ypf-s" placeholder="🔍 Buscar contrato, dirección..." onkeyup="filterTable('ypf-superficie')">
+          </div>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="ypf-superficie">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pagination-custom" id="pagination-ypf-s"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: GUARDACOSTAS ======== -->
+    <div id="tab-gc" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>🚢</span> Saldos de Combustible — Guardacostas</h2>
+          <div class="actions">
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="exportTable('gc-saldos')">
+              <span>📥</span> Exportar
+            </button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="filters-bar">
+            <input type="text" id="search-gc" placeholder="🔍 Buscar guardacostas..." onkeyup="filterTable('gc-saldos')">
+            <select id="filter-condicion" onchange="filterTable('gc-saldos')">
+              <option value="">Todas las condiciones</option>
+              <option value="BRAVO">BRAVO</option>
+              <option value="CHARLIE">CHARLIE</option>
+              <option value="ZULU">ZULU</option>
+            </select>
+          </div>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="gc-saldos">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pagination-custom" id="pagination-gc"></div>
+        </div>
+      </div>
+
+      <div class="glass-section active" style="margin-top:24px;">
+        <div class="section-header">
+          <h2><span>📋</span> Condición de Alistamiento — Guardacostas</h2>
+        </div>
+        <div class="section-body">
+          <div class="data-table-wrapper">
+            <table class="data-table" id="gc-condicion">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: CONSUMO DIARIO ======== -->
+    <div id="tab-consumo" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>📈</span> Consumo por Día — Medios Terrestres</h2>
+          <div class="actions">
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="exportTable('consumo-diario')">
+              <span>📥</span> Exportar
+            </button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="filters-bar">
+            <input type="text" id="search-consumo" placeholder="🔍 Buscar dirección..." onkeyup="filterTable('consumo-diario')">
+            <select id="filter-contrato" onchange="filterTable('consumo-diario')">
+              <option value="">Todos los contratos</option>
+            </select>
+          </div>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="consumo-diario">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pagination-custom" id="pagination-consumo"></div>
+        </div>
+      </div>
+
+      <div class="chart-row" style="margin-top:24px;">
+        <div class="glass-section active">
+          <div class="section-header">
+            <h2><span>📊</span> Evolución del Límite Disponible</h2>
+          </div>
+          <div class="section-body">
+            <div class="chart-container">
+              <canvas id="chart-limite-evol"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="glass-section active">
+          <div class="section-header">
+            <h2><span>📊</span> Evolución del Consumo Diario</h2>
+          </div>
+          <div class="section-body">
+            <div class="chart-container">
+              <canvas id="chart-consumo-evol"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: REPORTE SIMO ======== -->
+    <div id="tab-simo" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>📋</span> Reporte SIMO — Medios y Alistamiento</h2>
+          <div class="actions">
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="exportTable('simo-table')">
+              <span>📥</span> Exportar
+            </button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="filters-bar">
+            <input type="text" id="search-simo" placeholder="🔍 Buscar medio, zona, sigla..." onkeyup="filterTable('simo-table')">
+            <select id="filter-alistamiento" onchange="filterTable('simo-table')">
+              <option value="">Todas las condiciones</option>
+              <option value="BRAVO">BRAVO</option>
+              <option value="CHARLIE">CHARLIE</option>
+              <option value="ZULU">ZULU</option>
+            </select>
+            <select id="filter-tipo" onchange="filterTable('simo-table')">
+              <option value="">Todos los tipos</option>
+            </select>
+          </div>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="simo-table">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pagination-custom" id="pagination-simo"></div>
+        </div>
+      </div>
+
+      <div class="glass-section active" style="margin-top:24px;">
+        <div class="section-header">
+          <h2><span>📊</span> Resumen por Condición de Alistamiento</h2>
+        </div>
+        <div class="section-body">
+          <div class="chart-container" style="height:280px;">
+            <canvas id="chart-simo-condicion"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: REPOSITORIO ======== -->
+    <div id="tab-repositorio" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>📚</span> Repositorio de Partes Diarios</h2>
+        </div>
+        <div class="section-body">
+          <div class="repo-intro" style="margin-bottom:24px;">
+            <p style="color:var(--text-secondary);font-size:14px;line-height:1.6;">
+              Cada vez que cargues los 3 archivos Excel, podés guardar un <strong>"Parte Diario"</strong> con la fecha correspondiente.
+              Esto permite consultar el estado de cualquier día del año sin perder información.
+            </p>
+          </div>
+
+          <div class="filters-bar" style="flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="color:var(--text-secondary);font-size:13px;font-weight:600;">📅 Fecha del parte a guardar:</label>
+              <input type="date" id="repo-fecha-guardar">
+            </div>
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="guardarParteDiario()">
+              <span>💾</span> Guardar Parte del Día
+            </button>
+            <div style="width:100%;height:1px;background:var(--glass-border);margin:4px 0;"></div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="color:var(--text-secondary);font-size:13px;font-weight:600;">🔍 Buscar parte guardado:</label>
+              <input type="date" id="repo-fecha-buscar" onchange="cargarParteDelDia(this.value)">
+            </div>
+            <button class="btn-glass btn-sm" onclick="listarPartesGuardados()">🔄 Actualizar lista</button>
+            <button class="btn-glass btn-glass-danger btn-sm" onclick="eliminarParteSeleccionado()">🗑️ Eliminar seleccionado</button>
+          </div>
+
+          <div id="repo-lista-container" style="margin-bottom:20px;">
+            <h4 style="color:var(--text-primary);font-size:14px;margin-bottom:12px;">📂 Partes guardados:</h4>
+            <div id="repo-lista" class="repo-lista">
+              <p style="color:var(--text-muted);font-size:13px;padding:20px;text-align:center;">Aún no hay partes guardados. Cargá los archivos Excel y hacé clic en "Guardar Parte del Día".</p>
+            </div>
+          </div>
+
+          <div id="repo-vista-previa" style="display:none;">
+            <div class="section-header" style="margin-bottom:16px;border-radius:12px 12px 0 0;">
+              <h3 style="font-size:14px;margin:0;">👁️ Vista previa del parte seleccionado</h3>
+              <span id="repo-fecha-actual" style="color:var(--accent);font-weight:700;font-size:13px;"></span>
+            </div>
+            <div class="kpi-row" id="repo-kpis"></div>
+            <div class="chart-row" id="repo-charts"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: COMPARATIVA ======== -->
+    <div id="tab-comparativa" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>⚖️</span> Comparativa entre Fechas</h2>
+        </div>
+        <div class="section-body">
+          <div class="filters-bar" style="gap:20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <label style="color:var(--text-secondary);font-size:13px;font-weight:600;">Fecha A:</label>
+              <input type="date" id="comp-fecha-a">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <label style="color:var(--text-secondary);font-size:13px;font-weight:600;">Fecha B:</label>
+              <input type="date" id="comp-fecha-b">
+            </div>
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="compararFechas()">
+              <span>🔍</span> Comparar
+            </button>
+          </div>
+
+          <div id="comp-resultados" style="display:none;">
+            <div class="kpi-row" id="comp-kpis" style="margin-bottom:24px;"></div>
+            <div class="glass-section active">
+              <div class="section-header"><h3 style="font-size:14px;margin:0;">📊 Evolución comparativa</h3></div>
+              <div class="section-body">
+                <div class="chart-container"><canvas id="chart-comparativa"></canvas></div>
+              </div>
+            </div>
+            <div class="data-table-wrapper" style="margin-top:24px;">
+              <table class="data-table" id="comp-tabla">
+                <thead><tr>
+                  <th>Indicador</th>
+                  <th style="text-align:right;">Fecha A</th>
+                  <th style="text-align:right;">Fecha B</th>
+                  <th style="text-align:right;">Diferencia</th>
+                  <th style="text-align:center;">Variación %</th>
+                </tr></thead>
+                <tbody id="comp-tabla-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: PREVISIONES ======== -->
+    <div id="tab-previsiones" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>🔮</span> Asistente de Previsiones</h2>
+        </div>
+        <div class="section-body">
+          <div class="repo-intro" style="margin-bottom:24px;">
+            <p style="color:var(--text-secondary);font-size:14px;line-height:1.6;">
+              Basado en los datos históricos guardados, el sistema proyecta <strong>consumos, saldos y necesidades presupuestarias</strong>.
+              Seleccioná el período y el sistema calculará automáticamente las proyecciones.
+            </p>
+          </div>
+
+          <div class="filters-bar" style="gap:20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <label style="color:var(--text-secondary);font-size:13px;font-weight:600;">Período:</label>
+              <select id="prev-periodo">
+                <option value="mensual">Mensual (30 días)</option>
+                <option value="cuatrimestral">Cuatrimestral (4 meses)</option>
+                <option value="semestral">Semestral (6 meses)</option>
+                <option value="anual">Anual (12 meses)</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <label style="color:var(--text-secondary);font-size:13px;font-weight:600;">Desde:</label>
+              <input type="date" id="prev-fecha-desde">
+            </div>
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="generarPrevision()">
+              <span>📊</span> Generar Previsión
+            </button>
+          </div>
+
+          <div id="prev-resultados" style="display:none;">
+            <div class="kpi-row" id="prev-kpis" style="margin-bottom:24px;"></div>
+            <div class="chart-row">
+              <div class="glass-section active">
+                <div class="section-header"><h3 style="font-size:14px;margin:0;">📈 Proyección de Consumo</h3></div>
+                <div class="section-body"><div class="chart-container"><canvas id="chart-prev-consumo"></canvas></div></div>
+              </div>
+              <div class="glass-section active">
+                <div class="section-header"><h3 style="font-size:14px;margin:0;">💰 Proyección de Saldos</h3></div>
+                <div class="section-body"><div class="chart-container"><canvas id="chart-prev-saldos"></canvas></div></div>
+              </div>
+            </div>
+            <div class="glass-section active" style="margin-top:24px;">
+              <div class="section-header"><h3 style="font-size:14px;margin:0;">📋 Resumen de Previsión</h3></div>
+              <div class="section-body">
+                <div class="data-table-wrapper">
+                  <table class="data-table" id="prev-tabla">
+                    <thead><tr>
+                      <th>Servicio / Concepto</th>
+                      <th style="text-align:right;">Saldo Actual</th>
+                      <th style="text-align:right;">Consumo Prom.</th>
+                      <th style="text-align:right;">Proyección Período</th>
+                      <th style="text-align:right;">Saldo Proyectado</th>
+                      <th style="text-align:center;">Estado</th>
+                    </tr></thead>
+                    <tbody id="prev-tabla-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="glass-section active" style="margin-top:24px;">
+              <div class="section-header"><h3 style="font-size:14px;margin:0;">⚠️ Alertas y Recomendaciones</h3></div>
+              <div class="section-body" id="prev-alertas"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TAB: LUBRICANTES ======== -->
+    <div id="tab-lub" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>🛢️</span> Previsión de Compra de Lubricantes — SBGC</h2>
+          <div class="actions">
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="exportTable('lub-table')">
+              <span>📥</span> Exportar
+            </button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="data-table-wrapper">
+            <table class="data-table" id="lub-table">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="kpi-row" style="margin-top:20px;">
+            <div class="kpi-card kpi-info">
+              <div class="kpi-icon">🛢️</div>
+              <div class="kpi-label">Total Previsión Lubricantes</div>
+              <div class="kpi-value" id="kpi-lub-total">$0,00</div>
+            </div>
+            <div class="kpi-card kpi-success">
+              <div class="kpi-icon">📦</div>
+              <div class="kpi-label">Items a Comprar</div>
+              <div class="kpi-value" id="kpi-lub-items">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  
+    <!-- ======== TAB: ADMINISTRACIÓN (ABM USUARIOS) ======== -->
+    <div id="tab-admin" class="tab-content">
+      <div class="glass-section active">
+        <div class="section-header">
+          <h2><span>⚙️</span> Administración de Usuarios</h2>
+          <div class="actions">
+            <button class="btn-glass btn-glass-primary btn-sm" onclick="testCloudConnection()">
+              <span>🔗</span> Conectar con GitHub
+            </button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div id="panel-abm-usuarios">
+            <form class="filters-bar" style="margin-bottom:20px;flex-wrap:wrap;" onsubmit="event.preventDefault(); agregarUsuario();">
+              <input type="text" id="abm-dni" placeholder="DNI" style="width:120px;" autocomplete="off">
+              <input type="text" id="abm-nombre" placeholder="Nombre completo *" style="flex:1;min-width:200px;" autocomplete="off">
+              <input type="text" id="abm-user" placeholder="Usuario *" style="width:150px;" autocomplete="off">
+              <input type="password" id="abm-pass" placeholder="Contraseña *" style="width:150px;" autocomplete="new-password">
+              <select id="abm-rol" style="width:120px;"><option value="user">Usuario</option><option value="operador">Operador</option><option value="admin">Administrador</option></select>
+              <button type="submit" class="btn-glass btn-glass-primary btn-sm">
+                <span>➕</span> Agregar
+              </button>
+            </form>
+
+            <div class="data-table-wrapper">
+              <table class="data-table" id="tabla-usuarios">
+                <thead>
+                  <tr>
+                    <th>DNI</th>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th style="text-align:center;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-usuarios">
+                  <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando usuarios...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+              <div id="abm-status" style="color:var(--text-muted);font-size:12px;"></div>
+              <button class="btn-glass btn-glass-primary btn-sm" onclick="guardarUsuariosEnNube()">
+                <span>💾</span> Guardar cambios en la nube
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+</main>
+
+  <!-- LOADING -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner-modern"></div>
+    <p style="color:var(--text-secondary); font-size:14px; font-weight:500;">Procesando archivo Excel...</p>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
